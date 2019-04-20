@@ -184,6 +184,7 @@ class Darknet(nn.Module):
         img_size = x.shape[-1]
         layer_outputs = []
         output = []
+        feature_map = []
 
         for i, (module_def, module) in enumerate(zip(self.module_defs, self.module_list)):
             mtype = module_def['type']
@@ -199,12 +200,13 @@ class Darknet(nn.Module):
                 layer_i = int(module_def['from'])
                 x = layer_outputs[-1] + layer_outputs[layer_i]
             elif mtype == 'yolo':
+                feature_map.append(x)
                 x = module[0](x, img_size)
                 output.append(x)
             layer_outputs.append(x)
 
         if self.training:
-            return output
+            return output, feature_map
         elif ONNX_EXPORT:
             output = torch.cat(output, 1)  # cat 3 layers 85 x (507, 2028, 8112) to 85 x 10647
             return output[5:85].t(), output[:4].t()  # ONNX scores, boxes
