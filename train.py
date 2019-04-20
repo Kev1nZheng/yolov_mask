@@ -154,9 +154,10 @@ def train(
                     p.requires_grad = False if epoch == 0 else True
 
         mloss = torch.zeros(5).to(device)  # mean losses
-        for i, (imgs, targets, _, _) in enumerate(dataloader):
+        for i, (imgs, targets, gt_mask, _, _) in enumerate(dataloader):
             imgs = imgs.to(device)
             targets = targets.to(device)
+            gt_mask = gt_mask.to(device)
             nt = len(targets)
             # if nt == 0:  # if no targets continue
             #     continue
@@ -175,9 +176,9 @@ def train(
             pred, feature_map = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
-            # print(feature_map[0].shape)
-            # print(feature_map[1].shape)
-            # print(feature_map[2].shape)
+            # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
+            # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
+            # print(feature_map[2].shape) # torch.Size([1, 255, 52, 52])
             # Compute loss
             loss, loss_items = compute_loss(pred, targets, model)
             if torch.isnan(loss):
@@ -263,7 +264,7 @@ def print_mutation(hyp, results):
         f.write(c + b + '\n')
 
 
-def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
+def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape):
     """Implements ROI Pooling on multiple levels of the feature pyramid.
 
     Params:
@@ -301,22 +302,21 @@ def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
     # Equation 1 in the Feature Pyramid Networks paper. Account for
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
-    image_area = torch.FloatTensor([float(image_shape[0]*image_shape[1])]), requires_grad=False
+    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])]), requires_grad = False
     if boxes.is_cuda:
         image_area = image_area.cuda()
-    roi_level = 3 + torch.log2(torch.sqrt(h*w)/(224.0/torch.sqrt(image_area)))
+    roi_level = 3 + torch.log2(torch.sqrt(h * w) / (224.0 / torch.sqrt(image_area)))
     roi_level = roi_level.round().int()
-    roi_level = roi_level.clamp(1,3)
-
+    roi_level = roi_level.clamp(1, 3)
 
     # Loop through levels and apply ROI pooling to each. P1 to P3.
     pooled = []
     box_to_level = []
     for i, level in enumerate(range(1, 4)):
-        ix  = roi_level==level
+        ix = roi_level == level
         if not ix.any():
             continue
-        ix = torch.nonzero(ix)[:,0]
+        ix = torch.nonzero(ix)[:, 0]
         level_boxes = boxes[ix.data, :]
 
         # Keep track of which box is mapped to which level
@@ -334,10 +334,10 @@ def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
         # Here we use the simplified approach of a single value per bin,
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
-        ind = torch.zeros(level_boxes.size()[0]),requires_grad=False.int()
+        ind = torch.zeros(level_boxes.size()[0]), requires_grad = False.int()
         if level_boxes.is_cuda:
             ind = ind.cuda()
-        feature_maps[i] = feature_maps[i].unsqueeze(0)  #CropAndResizeFunction needs batch dimension
+        feature_maps[i] = feature_maps[i].unsqueeze(0)  # CropAndResizeFunction needs batch dimension
         pooled_features = CropAndResizeFunction(pool_size, pool_size, 0)(feature_maps[i], level_boxes, ind)
         pooled.append(pooled_features)
 
@@ -353,7 +353,6 @@ def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
     pooled = pooled[box_to_level, :, :]
 
     return pooled
-
 
 
 if __name__ == '__main__':
