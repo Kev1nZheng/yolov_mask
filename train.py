@@ -9,6 +9,7 @@ import test  # Import test.py to get mAP after each epoch
 from models import *
 from utils.datasets import *
 from utils.utils import *
+from roialign.roi_align.crop_and_resize import CropAndResizeFunction
 
 # Hyperparameters
 # 0.852       0.94      0.924      0.883       1.33       8.52    0.06833    0.01524    0.01509     0.9013     0.1003   0.001325     -3.853     0.8948  0.0004053  # hyp
@@ -300,10 +301,10 @@ def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
     # Equation 1 in the Feature Pyramid Networks paper. Account for
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
-    image_area = Variable(torch.FloatTensor([float(image_shape[0]*image_shape[1])]), requires_grad=False)
+    image_area = torch.FloatTensor([float(image_shape[0]*image_shape[1])]), requires_grad=False
     if boxes.is_cuda:
         image_area = image_area.cuda()
-    roi_level = 3 + log2(torch.sqrt(h*w)/(224.0/torch.sqrt(image_area)))
+    roi_level = 3 + torch.log2(torch.sqrt(h*w)/(224.0/torch.sqrt(image_area)))
     roi_level = roi_level.round().int()
     roi_level = roi_level.clamp(1,3)
 
@@ -333,7 +334,7 @@ def pyramid_roi_align(inputs, pool_size = [14, 14], image_shape):
         # Here we use the simplified approach of a single value per bin,
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
-        ind = Variable(torch.zeros(level_boxes.size()[0]),requires_grad=False).int()
+        ind = torch.zeros(level_boxes.size()[0]),requires_grad=False.int()
         if level_boxes.is_cuda:
             ind = ind.cuda()
         feature_maps[i] = feature_maps[i].unsqueeze(0)  #CropAndResizeFunction needs batch dimension
