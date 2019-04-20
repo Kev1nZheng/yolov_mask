@@ -176,10 +176,6 @@ def train(
             pred, feature_map = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
-<<<<<<< HEAD
-            # print(feature_map[0].shape)
-            # print(feature_map[1].shape)
-            # print(feature_map[2].shape)
             detections = non_max_suppression(pred, conf_thres = 0.5, nms_thres = 0.5)[0]
             num_boxes = detections[0]
             x1, y1, x2, y2 = detections[1:5]
@@ -187,11 +183,9 @@ def train(
             inputs_roi = [boxes, feature_map]
             pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape = [416, 416, 3])
 
-=======
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
             # print(feature_map[2].shape) # torch.Size([1, 255, 52, 52])
->>>>>>> 58d9657d2eadb7c29b6705fcd1e67acf65d130c8
             # Compute loss
             loss, loss_items = compute_loss(pred, targets, model)
             if torch.isnan(loss):
@@ -315,11 +309,9 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape):
     # Equation 1 in the Feature Pyramid Networks paper. Account for
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
-<<<<<<< HEAD
-    image_area = torch.float([float(image_shape[0]*image_shape[1])]), requires_grad=False
-=======
+
     image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])]), requires_grad = False
->>>>>>> 58d9657d2eadb7c29b6705fcd1e67acf65d130c8
+
     if boxes.is_cuda:
         image_area = image_area.cuda()
     roi_level = 3 + torch.log2(torch.sqrt(h * w) / (224.0 / torch.sqrt(image_area)))
