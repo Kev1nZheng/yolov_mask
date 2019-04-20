@@ -8,10 +8,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
 from utils.utils import xyxy2xywh
+from utils.parse_config import parse_data_cfg
 
 
 class LoadImages:  # for inference
@@ -141,7 +142,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.label_files = [
             x.replace('images', 'labels').replace('.bmp', '.txt').replace('.jpg', '.txt').replace('.png', '.txt')
             for x in self.img_files]
-
+        self.mask_files = [
+            x.replace('images', 'mask').replace('.bmp', '.npy').replace('.jpg', '.npy').replace('.png', '.npy')
+            for x in self.img_files]
         # if n < 200:  # preload all images into memory if possible
         #    self.imgs = [cv2.imread(img_files[i]) for i in range(n)]
 
@@ -151,7 +154,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
     def __getitem__(self, index):
         img_path = self.img_files[index]
         label_path = self.label_files[index]
-
+        mask_path = self.mask_files[index]
         # if hasattr(self, 'imgs'):
         #    img = self.imgs[index]  # BGR
         img = cv2.imread(img_path)  # BGR
@@ -191,7 +194,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 labels[:, 2] = ratio * h * (x[:, 2] - x[:, 4] / 2) + padh
                 labels[:, 3] = ratio * w * (x[:, 1] + x[:, 3] / 2) + padw
                 labels[:, 4] = ratio * h * (x[:, 2] + x[:, 4] / 2) + padh
-
+        mask = np.load(mask_path)
+        mask = torch.from_numpy(mask)
         # Augment image and labels
         if self.augment:
             img, labels = random_affine(img, labels, degrees=(-5, 5), translate=(0.10, 0.10), scale=(0.90, 1.10))
@@ -225,14 +229,15 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         img = np.ascontiguousarray(img, dtype=np.float32)  # uint8 to float32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
 
-        return torch.from_numpy(img), labels_out, img_path, (h, w)
+        return torch.from_numpy(img), labels_out, mask, img_path, (h, w)
 
     @staticmethod
     def collate_fn(batch):
-        img, label, path, hw = list(zip(*batch))  # transposed
+        img, label, mask, path, hw = list(zip(*batch))  # transposed
         for i, l in enumerate(label):
             l[:, 0] = i  # add target image index for build_targets()
-        return torch.stack(img, 0), torch.cat(label, 0), path, hw
+        return torch.stack(img, 0), torch.cat(label, 0), torch.cat(mask, 0)
+        path, hw
 
 
 def letterbox(img, height=416, color=(127.5, 127.5, 127.5)):
@@ -339,3 +344,23 @@ def convert_images2bmp():
             '/Users/glennjocher/PycharmProjects/', '../')
         with open(label_path.replace('5k', '5k_bmp'), 'w') as file:
             file.write(lines)
+
+
+if __name__ == '__main__':
+
+    data_cfg = '/data/Huaiyu/huaiyu/yolov3/data/coco.data'
+    train_path = parse_data_cfg(data_cfg)['train']
+    dataset1 = LoadImagesAndLabels(train_path, img_size=416, augment=True)
+    dataloader = DataLoader(dataset1,
+                            batch_size=1,
+                            num_workers=1,
+                            shuffle=False,
+                            pin_memory=False,
+                            collate_fn=dataset1.collate_fn,
+                            sampler=None)
+    for i, (imgs, targets, mask, path, _) in enumerate(dataloader):
+        print('imgs[0]', imgs.shape)
+        print('targets[0]', targets.shape)
+        print('mask[0]', mask.shape)
+        print('path[0]', path)
+        print('\n')
