@@ -162,6 +162,10 @@ def train(
             imgs = imgs.to(device)
             targets = targets.to(device)
             gt_mask = gt_mask.to(device)
+            print('imgs:', imgs.shape)
+            print('targets:', targets.shape)
+            print('gt_mask:', gt_mask.shape)
+
             nt = len(targets)
             # if nt == 0:  # if no targets continue
             #     continue
@@ -192,12 +196,14 @@ def train(
             image_shape = [416, 416, 3]
             # pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
             mrcnn_mask = mask(feature_maps, boxes)
-
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
             # print(feature_map[2].shape) # torch.Size([1, 255, 52, 52])
+
             # Compute loss
+            mask_loss = compute_mrcnn_mask_loss(target_masks, target_class_ids, mrcnn_mask)
             loss, loss_items = compute_loss(pred, targets, model)
+            loss = loss + mask_loss
             if torch.isnan(loss):
                 print('WARNING: nan loss detected, ending training')
                 return results
@@ -320,7 +326,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
 
-    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
+    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])], requires_grad=False)
     # image_area = torch.Tensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
 
     if boxes.is_cuda:
@@ -354,7 +360,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
         # Here we use the simplified approach of a single value per bin,
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
-        ind = torch.zeros(level_boxes.size()[0], requires_grad = False).int()
+        ind = torch.zeros(level_boxes.size()[0], requires_grad=False).int()
         # ind = torch.zeros(level_boxes.size()[0], requires_grad = False).int()
         if level_boxes.is_cuda:
             ind = ind.cuda()
