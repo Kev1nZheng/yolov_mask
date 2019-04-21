@@ -192,7 +192,7 @@ def train(
             boxes = []
             num_boxes = len(pred)
             for i in range(num_boxes):
-                detection = non_max_suppression(pred[i], conf_thres=0.5, nms_thres=0.5)[0]
+                detection = non_max_suppression(pred[i], conf_thres=0.5, nms_thres=0.5)
                 # detections.append(detection)
 
                 x1, y1, x2, y2 = detection
