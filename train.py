@@ -176,12 +176,13 @@ def train(
             pred, feature_map = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
-            detections = non_max_suppression(pred, conf_thres = 0.5, nms_thres = 0.5)[0]
+            detections = non_max_suppression(pred, conf_thres=0.5, nms_thres=0.5)[0]
             num_boxes = detections[0]
             x1, y1, x2, y2 = detections[1:5]
-            boxes = [batch_size, num_boxes, (y1,x1,y2,x2)]
+            boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
             inputs_roi = [boxes, feature_map]
-            pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape = [416, 416, 3])
+            image_shape = [416, 416, 3]
+            pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
 
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
@@ -271,7 +272,7 @@ def print_mutation(hyp, results):
         f.write(c + b + '\n')
 
 
-def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape):
+def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     """Implements ROI Pooling on multiple levels of the feature pyramid.
 
     Params:
@@ -468,4 +469,3 @@ if __name__ == '__main__':
             # for i in range(1, 10):
             #     plt.subplot(2, 5, i)
             #     plt.plot(x, a[:, i + 5], '.')
-
