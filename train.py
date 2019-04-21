@@ -1,5 +1,6 @@
 import argparse
 import time
+import numpy as np
 
 import torch.distributed as dist
 import torch.optim as optim
@@ -176,12 +177,21 @@ def train(
             pred, feature_map = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
-            detections = non_max_suppression(pred, conf_thres=0.5, nms_thres=0.5)[0]
-            num_boxes = detections[0]
-            x1, y1, x2, y2 = detections[1:5]
-            boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
-            inputs_roi = [boxes, feature_map]
+
             image_shape = [416, 416, 3]
+
+            detections = []
+            boxes = []
+            num_boxes = len(pred)
+            for i in range(num_boxes):
+                detection = non_max_suppression(pred[i], conf_thres=0.5, nms_thres=0.5)[0]
+                detections.append(detection)
+
+                x1, y1, x2, y2 = detection[1:5]
+                box = [num_boxes, (y1, x1, y2, x2)]
+                boxes.append(box)
+            boxes = np.array(boxes)
+            inputs_roi = [boxes, feature_map]
             pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
 
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
