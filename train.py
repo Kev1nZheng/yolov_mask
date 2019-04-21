@@ -9,7 +9,7 @@ import test  # Import test.py to get mAP after each epoch
 from models import *
 from utils.datasets import *
 from utils.utils import *
-from roialign.roi_align.crop_and_resize import CropAndResizeFunction
+from roi_align.crop_and_resize import CropAndResizeFunction
 
 # Hyperparameters
 # 0.852       0.94      0.924      0.883       1.33       8.52    0.06833    0.01524    0.01509     0.9013     0.1003   0.001325     -3.853     0.8948  0.0004053  # hyp
@@ -174,25 +174,21 @@ def train(
                     x['lr'] = lr
 
             # Run model
-            pred, feature_map = model(imgs)
+            pred, feature_maps = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
             detections = non_max_suppression(pred, conf_thres=0.5, nms_thres=0.5)[0]
             num_boxes = detections[0]
             x1, y1, x2, y2 = detections[1:5]
-            
-
 
             # mask branch
-            #boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
+            # boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
             # if x1,y1,x2,y2 is m*1 size
             boxes = torch.cat([y1, x1, y2, x2], dim=1)
             # inputs_roi = [boxes, feature_map]
             image_shape = [416, 416, 3]
             # pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
             mrcnn_mask = mask(feature_maps, boxes)
-             
-
 
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
@@ -322,6 +318,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     # e.g. a 224x224 ROI (in pixels) maps to P4
 
     image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])]), requires_grad = False
+    # image_area = torch.Tensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
 
     if boxes.is_cuda:
         image_area = image_area.cuda()
@@ -355,6 +352,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
         ind = torch.zeros(level_boxes.size()[0]), requires_grad = False.int()
+        # ind = torch.zeros(level_boxes.size()[0], requires_grad = False).int()
         if level_boxes.is_cuda:
             ind = ind.cuda()
         feature_maps[i] = feature_maps[i].unsqueeze(0)  # CropAndResizeFunction needs batch dimension
@@ -373,6 +371,36 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     pooled = pooled[box_to_level, :, :]
 
     return pooled
+
+
+def compute_mrcnn_mask_loss(target_masks, target_class_ids, pred_masks):
+    """Mask binary cross-entropy loss for the masks head.
+
+    target_masks: [batch, num_rois, height, width].
+        A float32 tensor of values 0 or 1. Uses zero padding to fill array.
+    target_class_ids: [batch, num_rois]. Integer class IDs. Zero padded.
+    pred_masks: [batch, proposals, height, width, num_classes] float32 tensor
+                with values from 0 to 1.
+    """
+    if target_class_ids.size():
+        # Only positive ROIs contribute to the loss. And only
+        # the class specific mask of each ROI.
+        positive_ix = torch.nonzero(target_class_ids > 0)[:, 0]
+        positive_class_ids = target_class_ids[positive_ix.data].long()
+        indices = torch.stack((positive_ix, positive_class_ids), dim=1)
+
+        # Gather the masks (predicted and true) that contribute to loss
+        y_true = target_masks[indices[:, 0].data, :, :]
+        y_pred = pred_masks[indices[:, 0].data, indices[:, 1].data, :, :]
+
+        # Binary cross entropy
+        loss = F.binary_cross_entropy(y_pred, y_true)
+    else:
+        loss = torch.Tensor([0], requires_grad=False)
+        if target_class_ids.is_cuda:
+            loss = loss.cuda()
+
+    return loss
 
 
 if __name__ == '__main__':
