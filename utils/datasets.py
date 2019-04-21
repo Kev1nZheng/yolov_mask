@@ -236,8 +236,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         img, label, mask, path, hw = list(zip(*batch))  # transposed
         for i, l in enumerate(label):
             l[:, 0] = i  # add target image index for build_targets()
-        return torch.stack(img, 0), torch.cat(label, 0), torch.cat(mask, 0)
-        path, hw
+        return torch.stack(img, 0), torch.cat(label, 0), torch.cat(mask, 0), path, hw
 
 
 def letterbox(img, height=416, color=(127.5, 127.5, 127.5)):
