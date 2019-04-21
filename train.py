@@ -55,6 +55,7 @@ def train(
 
     # Initialize model
     model = Darknet(cfg, img_size).to(device)
+    mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES)
 
     # Optimizer
     optimizer = optim.SGD(model.parameters(), lr=hyp['lr0'], momentum=hyp['momentum'], weight_decay=hyp['weight_decay'])
@@ -179,10 +180,19 @@ def train(
             detections = non_max_suppression(pred, conf_thres=0.5, nms_thres=0.5)[0]
             num_boxes = detections[0]
             x1, y1, x2, y2 = detections[1:5]
-            boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
-            inputs_roi = [boxes, feature_map]
+            
+
+
+            # mask branch
+            #boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
+            # if x1,y1,x2,y2 is m*1 size
+            boxes = torch.cat([y1, x1, y2, x2], dim=1)
+            # inputs_roi = [boxes, feature_map]
             image_shape = [416, 416, 3]
-            pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
+            # pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
+            mrcnn_mask = mask(feature_maps, boxes)
+             
+
 
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
