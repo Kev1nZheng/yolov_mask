@@ -187,6 +187,12 @@ def train(
             # print('pred:', len(pred))
 
             image_shape = [416, 416, 3]
+            pred_temp  =[]
+            for i in range(len(pred)):
+                temp = pred[i].view(1,-1,85)
+                pred_temp.append(temp)
+
+            pred = torch.cat(pred_temp, 1)
 
             # detections = []
             boxes = []
@@ -194,7 +200,6 @@ def train(
             for i in range(num_boxes):
                 detection = non_max_suppression(pred[i], conf_thres=0.5, nms_thres=0.5)
                 # detections.append(detection)
-
                 x1, y1, x2, y2 = detection
                 box = [num_boxes, (y1, x1, y2, x2)]
                 boxes.append(box)
