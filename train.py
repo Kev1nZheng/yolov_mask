@@ -188,14 +188,14 @@ def train(
 
             image_shape = [416, 416, 3]
 
-            detections = []
+            # detections = []
             boxes = []
             num_boxes = len(pred)
             for i in range(num_boxes):
                 detection = non_max_suppression(pred[i], conf_thres=0.5, nms_thres=0.5)[0]
-                detections.append(detection)
+                # detections.append(detection)
 
-                x1, y1, x2, y2 = detection[1:5]
+                x1, y1, x2, y2 = detection
                 box = [num_boxes, (y1, x1, y2, x2)]
                 boxes.append(box)
             boxes = np.array(boxes)
