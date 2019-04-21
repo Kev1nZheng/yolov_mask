@@ -11,6 +11,8 @@ from utils.datasets import *
 from utils.utils import *
 from roi_align.crop_and_resize import CropAndResizeFunction
 
+from coco import CocoConfig
+
 # Hyperparameters
 # 0.852       0.94      0.924      0.883       1.33       8.52    0.06833    0.01524    0.01509     0.9013     0.1003   0.001325     -3.853     0.8948  0.0004053  # hyp
 hyp = {'k': 8.52,  # loss multiple
@@ -55,6 +57,7 @@ def train(
 
     # Initialize model
     model = Darknet(cfg, img_size).to(device)
+    config = CocoConfig()
     mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES)
 
     # Optimizer
@@ -317,7 +320,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
 
-    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])]), requires_grad = False
+    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
     # image_area = torch.Tensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
 
     if boxes.is_cuda:
@@ -351,7 +354,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
         # Here we use the simplified approach of a single value per bin,
         # which is how it's done in tf.crop_and_resize()
         # Result: [batch * num_boxes, pool_height, pool_width, channels]
-        ind = torch.zeros(level_boxes.size()[0]), requires_grad = False.int()
+        ind = torch.zeros(level_boxes.size()[0], requires_grad = False).int()
         # ind = torch.zeros(level_boxes.size()[0], requires_grad = False).int()
         if level_boxes.is_cuda:
             ind = ind.cuda()
