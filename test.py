@@ -172,6 +172,18 @@ def test(
     return mp, mr, map, mf1, loss / len(dataloader)
 
 
+def maskVisualization(image, mask):
+    """
+    :param image: [channel, width, height]
+    :param mask: [num_masks, width, height]
+    :return: image[channel, width, height]
+    """
+    num_mask = image[0]
+    # for i in range(num_mask):
+
+    return image_mask
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='test.py')
     parser.add_argument('--batch-size', type=int, default=32, help='size of each image batch')

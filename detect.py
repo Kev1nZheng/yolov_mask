@@ -74,6 +74,7 @@ def detect(
             torch.onnx.export(model, img, 'weights/model.onnx', verbose=True)
             return
         pred, _ = model(img)
+        print(pred.shape)
         detections = non_max_suppression(pred, conf_thres, nms_thres)[0]
 
         if detections is not None and len(detections) > 0:
