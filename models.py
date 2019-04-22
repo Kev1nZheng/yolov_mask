@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from utils.parse_config import *
 from utils.utils import *
 
+from roi_align.crop_and_resize import CropAndResizeFunction
+
 ONNX_EXPORT = False
 
 
