@@ -46,7 +46,8 @@ def train(
     weights = 'weights' + os.sep
     latest = weights + 'latest.pt'
     best = weights + 'best.pt'
-    device = torch_utils.select_device()
+    #device = torch_utils.select_device()
+    device = "cuda:0"
 
     if multi_scale:
         img_size = 608  # initiate with maximum multi_scale size
@@ -164,24 +165,37 @@ def train(
                 if int(name.split('.')[1]) < cutoff:  # if layer < 75
                     p.requires_grad = False if epoch == 0 else True
         '''
-        mloss = torch.zeros(5).to(device)  # mean losses
+        #mloss = torch.zeros(5).to(device)  # mean losses
+        mloss = torch.zeros(5).cuda()  # mean losses
         coco_path = "/data/Huaiyu/huaiyu/coco/"
         for i in range(1):
         #for i, (imgs, targets, gt_mask, _, _) in enumerate(dataloader):
-            reader_mask = open(coco_path + "mask/train2014/COCO_train2014_000000000009.pickle","rb")
-            reader_fmap = open(coco_path + "feature_maps/train2014/COCO_train2014_000000000009.pickle","rb")
+            #reader_mask = open(coco_path + "mask/train2014/COCO_train2014_000000000009.pickle","rb")
+            #reader_fmap = open(coco_path + "feature_maps/train2014/COCO_train2014_000000000009.pickle","rb")
+            reader_mask = open("../COCO_val2014_000000000164.pickle","rb")
+            reader_fmap = open("../COCO_val2014_000000000164.pickle","rb")
             pk_mask = pk.load(reader_mask)
             pk_fmap = pk.load(reader_fmap)
-            
+            '''
             gt_mask = torch.tensor(pk_mask[0]).to(device)
             gt_bbox = torch.tensor(pk_mask[1]).to(device)
             pred = torch.tensor(pk_fmap[3][:, :4]).to(device)
             feature_maps = pk_fmap[:3]
             for idx, item in enumerate(feature_maps):
               feature_maps[idx] = torch.tensor(item).to(device)
+            '''
+            print(type(torch.Tensor(pk_mask[0])), type(pk_mask[1]), type(pk_fmap[0]))  
             
+            gt_mask = torch.Tensor(pk_mask[0]).cuda()
+            gt_bbox = torch.Tensor(pk_mask[1]).cuda()
+            pred = torch.Tensor(pk_fmap[3][:, :4]).cuda()
+            feature_maps = pk_fmap[:3]
+            for idx, item in enumerate(feature_maps):
+              feature_maps[idx] = torch.Tensor(item).cuda()
+
             
-            
+            # large map ar first
+            feature_maps.reverse()
         
             '''
             imgs = imgs.to(device)
