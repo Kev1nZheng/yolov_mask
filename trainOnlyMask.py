@@ -61,7 +61,7 @@ def train(
     # Initialize model
     #model = Darknet(cfg, img_size).to(device)
     config = CocoConfig()
-    mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES).cuda()
+    mask = Mask(255, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES).to(device)
 
     # Dataloader
     dataset = LoadImagesAndSth(train_path)
@@ -176,21 +176,21 @@ def train(
                 if int(name.split('.')[1]) < cutoff:  # if layer < 75
                     p.requires_grad = False if epoch == 0 else True
         '''
-        #mloss = torch.zeros(5).to(device)  # mean losses
-        mloss = torch.zeros(5).cuda()  # mean losses
+        mloss = torch.zeros(5).to(device)  # mean losses
+        #mloss = torch.zeros(5)  # mean losses
         coco_path = "/data/Huaiyu/huaiyu/coco/"
 
         for i, (img, gt_masks, gt_boxes, gt_class_ids, feature_maps, yolo_boxes, wh) in enumerate(dataloader):
 
-
-        for i in range(1):
+          
+        #for i in range(1):
         #for i, (imgs, targets, gt_mask, _, _) in enumerate(dataloader):
             #reader_mask = open(coco_path + "mask/train2014/COCO_train2014_000000000009.pickle","rb")
             #reader_fmap = open(coco_path + "feature_maps/train2014/COCO_train2014_000000000009.pickle","rb")
-            reader_mask = open("../coco/mask/COCO_val2014_000000000164.pickle","rb")
-            reader_fmap = open("../coco/feature_maps/COCO_val2014_000000000164.pickle","rb")
-            pk_mask = pk.load(reader_mask)
-            pk_fmap = pk.load(reader_fmap)
+            #reader_mask = open("../coco/mask/COCO_val2014_000000000164.pickle","rb")
+            #reader_fmap = open("../coco/feature_maps/COCO_val2014_000000000164.pickle","rb")
+            #pk_mask = pk.load(reader_mask)
+            #pk_fmap = pk.load(reader_fmap)
             '''
             gt_mask = torch.tensor(pk_mask[0]).to(device)
             gt_bbox = torch.tensor(pk_mask[1]).to(device)
@@ -199,21 +199,38 @@ def train(
             for idx, item in enumerate(feature_maps):
               feature_maps[idx] = torch.tensor(item).to(device)
             '''
-            print(type(torch.Tensor(pk_mask[0])), type(pk_mask[1]), type(pk_fmap[0]))  
+            #print(type(torch.Tensor(pk_mask[0])), type(pk_mask[1]), type(pk_fmap[0]))  
             
-            gt_mask = torch.Tensor(pk_mask[0]).cuda()
-            gt_bbox = torch.Tensor(pk_mask[1]).cuda()
-            pred = torch.Tensor(pk_fmap[3][:, :4]).cuda()
-            feature_maps = pk_fmap[:3]
+              #gt_mask = torch.Tensor(pk_mask[0]).cuda()
+            #gt_bbox = torch.Tensor(pk_mask[1]).cuda()
+            #pred = torch.Tensor(pk_fmap[3][:, :4]).cuda()
+            #feature_maps = pk_fmap[:3]
             for idx, item in enumerate(feature_maps):
-              #feature_maps[idx] = torch.Tensor(item).cuda()
+              feature_maps[idx] = item.to(device)
               #print('in for: ', torch.Tensor(item).shape)
               #print(torch.zeros([1, 1, item.shape[2], item.shape[3]]))
-              feature_maps[idx] = torch.cat((torch.Tensor(item), torch.zeros([1, 1, item.shape[2], item.shape[3]])), 1).cuda()
+              #feature_maps[idx] = torch.cat((torch.Tensor(item), torch.zeros([1, 1, item.shape[2], item.shape[3]])), 1).cuda()
     
             # large map ar first
             feature_maps.reverse()
-        
+            
+            
+            
+            img= img.to(device)
+            gt_masks = gt_masks.to(device)
+            gt_boxes = gt_boxes.to(device)
+            gt_class_ids =  gt_class_ids.to(device)
+            yolo_boxes =  yolo_boxes.to(device)
+            #wh = wh.to(device)
+            print('img:', img.shape, 'wh: ', wh)
+            print('gt_bbox:', gt_boxes.shape)
+            print('gt_mask:', gt_masks.shape)
+            print('gt_class_id:', gt_class_ids.shape)
+            
+            print('yolo_boxes in training', yolo_boxes.shape)
+            print('feature map0 in training', feature_maps[0].shape)
+            print('feature map1 in training', feature_maps[1].shape)
+            print('feature map2 in training', feature_maps[2].shape)
             '''
             imgs = imgs.to(device)
             targets = targets.to(device)
@@ -242,12 +259,7 @@ def train(
             #pred, feature_map = model(imgs)
             # print('feature map:', len(feature_map))
             # print('pred:', len(pred))
-            print('gt_bbox:', gt_bbox.shape)
-            print('gt_mask:', gt_mask.shape)
-            print('pred in training', pred)
-            print('feature map0 in training', feature_maps[0].shape)
-            print('feature map1 in training', feature_maps[1].shape)
-            print('feature map2 in training', feature_maps[2].shape)
+
             '''
             image_shape = [416, 416, 3]
             pred_temp  =[]
@@ -276,12 +288,12 @@ def train(
             # boxes = [batch_size, num_boxes, (y1, x1, y2, x2)]
             # if x1,y1,x2,y2 is m*1 size
             # boxes = torch.cat([y1, x1, y2, x2], dim=1)
-            boxes = pred
+
             
             # inputs_roi = [boxes, feature_map]
             image_shape = [416, 416, 3]
             # pooled_regions = pyramid_roi_align(inputs_roi, [14, 14], image_shape)
-            mrcnn_mask = mask(feature_maps, boxes)
+            mrcnn_mask = mask(feature_maps, yolo_boxes)
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
             # print(feature_map[2].shape) # torch.Size([1, 255, 52, 52])
