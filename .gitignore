@@ -51,6 +51,7 @@ __pycache__/
 
 # C extensions
 *.so
+roi_align/src/cuda/crop_and_resize_kernel.cu.o
 
 # Distribution / packaging
 .Python
