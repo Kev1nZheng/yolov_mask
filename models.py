@@ -1,4 +1,5 @@
 import os
+import math
 
 import torch.nn.functional as F
 
@@ -335,7 +336,7 @@ def pyramid_roi_align(inputs, pool_size=[14, 14], image_shape=[416, 416, 3]):
     # the fact that our coordinates are normalized here.
     # e.g. a 224x224 ROI (in pixels) maps to P4
 
-    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])], requires_grad=False)
+    image_area = torch.FloatTensor([float(image_shape[0] * image_shape[1])])
     # image_area = torch.Tensor([float(image_shape[0] * image_shape[1])], requires_grad = False)
 
     if boxes.is_cuda:
