@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
+import pickle
 
 from utils.utils import xyxy2xywh
 from utils.parse_config import parse_data_cfg
@@ -237,6 +238,69 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         for i, l in enumerate(label):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), torch.cat(mask, 0), path, hw
+
+class LoadImagesAndSth(Dataset):  # for training/testing
+    def __init__(self, path):
+        with open(path, 'r') as file:
+            img_files = file.read().splitlines()
+            self.img_files = list(filter(lambda x: len(x) > 0, img_files))
+        # print('self.img_files', self.img_files)
+        n = len(self.img_files)
+        assert n > 0, 'No images found in %s' % path
+
+        self.GTpickle_files = [
+            x.replace('images', 'mask').replace('.bmp', '.pickle').replace('.jpg', '.pickle').replace('.png', '.pickle')
+            for x in self.img_files]
+        self.FMpicle_files = [
+            x.replace('images', 'feature_maps').replace('.bmp', '.pickle').replace('.jpg', '.pickle').replace('.png',
+                                                                                                              '.pickle')
+            for x in self.img_files]
+
+    def __len__(self):
+        return len(self.img_files)
+
+    def __getitem__(self, index):
+        img_path = self.img_files[index]
+        GTpickle_path = self.GTpickle_files[index]
+        FMpickle_path = self.FMpicle_files[index]
+
+        # if hasattr(self, 'imgs'):
+        #    img = self.imgs[index]  # BGR
+        img = cv2.imread(img_path)  # BGR
+        assert img is not None, 'File Not Found ' + img_path
+
+        h, w, _ = img.shape
+
+        pickle_in = open(FMpickle_path, 'rb')
+        FM = pickle.load(pickle_in)
+
+        with open(GTpickle_path, 'rb') as file1:
+            GT = pickle.load(file1)
+        file1.close()
+        # print('FMpickle_path', FMpickle_path)
+
+        gt_masks = GT[0]
+        # print('gt mask type', type(gt_masks))
+        gt_boxes_with_id = GT[1]
+        gt_boxes = gt_boxes_with_id[:, :4]
+        gt_class_ids = gt_boxes_with_id[:, 4]
+
+        gt_masks = gt_masks.transpose(1, 0, 2)
+        # print('FM len',len(FM))
+        feature_maps = FM[:3]
+        feature_maps[0] = feature_maps[0].squeeze(0)
+        feature_maps[1] = feature_maps[1].squeeze(0)
+        feature_maps[2] = feature_maps[2].squeeze(0)
+        yolo_boxes = FM[3]
+        yolo_boxes[:, [0, 1, 2, 3]] = yolo_boxes[:, [1, 0, 3, 2]]
+        return img, gt_masks, gt_boxes, gt_class_ids, feature_maps, yolo_boxes, (h, w)
+
+    # @staticmethod
+    # def collate_fn(batch):
+    #     img, label, path, hw = list(zip(*batch))  # transposed
+    #     for i, l in enumerate(label):
+    #         l[:, 0] = i  # add target image index for build_targets()
+    #     return torch.stack(img, 0), torch.cat(label, 0), path, hw
 
 
 def letterbox(img, height=416, color=(127.5, 127.5, 127.5)):

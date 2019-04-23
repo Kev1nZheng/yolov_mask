@@ -63,6 +63,17 @@ def train(
     config = CocoConfig()
     mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES).cuda()
 
+    # Dataloader
+    dataset = LoadImagesAndSth(train_path)
+    dataloader = DataLoader(dataset,
+                            batch_size=batch_size,
+                            num_workers=opt.num_workers,
+                            shuffle=False,
+                            pin_memory=True,
+                            # collate_fn=dataset.collate_fn,
+                            sampler=None)
+
+
     
     # Optimizer
     # optimizer = optim.SGD(model.parameters(), lr=hyp['lr0'], momentum=hyp['momentum'], weight_decay=hyp['weight_decay'])
@@ -168,6 +179,10 @@ def train(
         #mloss = torch.zeros(5).to(device)  # mean losses
         mloss = torch.zeros(5).cuda()  # mean losses
         coco_path = "/data/Huaiyu/huaiyu/coco/"
+
+        for i, (img, gt_masks, gt_boxes, gt_class_ids, feature_maps, yolo_boxes, wh) in enumerate(dataloader):
+
+
         for i in range(1):
         #for i, (imgs, targets, gt_mask, _, _) in enumerate(dataloader):
             #reader_mask = open(coco_path + "mask/train2014/COCO_train2014_000000000009.pickle","rb")
