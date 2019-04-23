@@ -46,8 +46,8 @@ def train(
     weights = 'weights' + os.sep
     latest = weights + 'latest.pt'
     best = weights + 'best.pt'
-    #device = torch_utils.select_device()
-    device = "cuda:0"
+    device = torch_utils.select_device()
+    #device = "cuda:0"
 
     if multi_scale:
         img_size = 608  # initiate with maximum multi_scale size
@@ -61,7 +61,7 @@ def train(
     # Initialize model
     #model = Darknet(cfg, img_size).to(device)
     config = CocoConfig()
-    mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES)
+    mask = Mask(256, config.MASK_POOL_SIZE, config.IMAGE_SHAPE, config.NUM_CLASSES).cuda()
 
     
     # Optimizer
@@ -172,8 +172,8 @@ def train(
         #for i, (imgs, targets, gt_mask, _, _) in enumerate(dataloader):
             #reader_mask = open(coco_path + "mask/train2014/COCO_train2014_000000000009.pickle","rb")
             #reader_fmap = open(coco_path + "feature_maps/train2014/COCO_train2014_000000000009.pickle","rb")
-            reader_mask = open("../COCO_val2014_000000000164.pickle","rb")
-            reader_fmap = open("../COCO_val2014_000000000164.pickle","rb")
+            reader_mask = open("../coco/mask/COCO_val2014_000000000164.pickle","rb")
+            reader_fmap = open("../coco/feature_maps/COCO_val2014_000000000164.pickle","rb")
             pk_mask = pk.load(reader_mask)
             pk_fmap = pk.load(reader_fmap)
             '''
@@ -191,9 +191,11 @@ def train(
             pred = torch.Tensor(pk_fmap[3][:, :4]).cuda()
             feature_maps = pk_fmap[:3]
             for idx, item in enumerate(feature_maps):
-              feature_maps[idx] = torch.Tensor(item).cuda()
-
-            
+              #feature_maps[idx] = torch.Tensor(item).cuda()
+              #print('in for: ', torch.Tensor(item).shape)
+              #print(torch.zeros([1, 1, item.shape[2], item.shape[3]]))
+              feature_maps[idx] = torch.cat((torch.Tensor(item), torch.zeros([1, 1, item.shape[2], item.shape[3]])), 1).cuda()
+    
             # large map ar first
             feature_maps.reverse()
         
@@ -268,7 +270,7 @@ def train(
             # print(feature_map[0].shape) # torch.Size([1, 255, 13, 13])
             # print(feature_map[1].shape) # torch.Size([1, 255, 26, 26])
             # print(feature_map[2].shape) # torch.Size([1, 255, 52, 52])
-            
+            print('predicted mask', mrcnn_mask.shape)
             
 
             # Compute loss
